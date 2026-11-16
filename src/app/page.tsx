@@ -190,7 +190,7 @@ export default function Home() {
             </div>
 
             {/* Segmented View Pill: Current View | Interactive View | Overview */}
-            <div className="inline-flex items-center p-1 bg-white border border-[#dfcca6] rounded-[6px] shadow-xs self-start sm:self-auto">
+            <div className="inline-flex items-center p-1 bg-white border border-[#dfcca6] rounded-[6px] shadow-xs self-center sm:self-auto mx-auto sm:mx-0">
               <button
                 onClick={() => setActiveView("current")}
                 className={`px-3.5 py-1.5 text-xs font-semibold rounded-[4px] transition-all duration-200 cursor-pointer ${
@@ -251,10 +251,10 @@ export default function Home() {
                         </svg>
                       </div>
                       <div>
-                        <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+                        <h2 className="text-base font-extrabold text-[#8b6914] tracking-tight">
                           Gold spot price (GBP)
                         </h2>
-                        <span className="text-[10px] font-bold text-[#8b6914] uppercase tracking-wider block">
+                        <span className="text-[10px] font-bold text-[#b8860b] uppercase tracking-wider block">
                           24K Pure · 999.9 Fine Gold
                         </span>
                       </div>
@@ -270,21 +270,21 @@ export default function Home() {
                     </span>
                   </div>
 
-                  {/* Main Price */}
-                  <div className="mt-5 pb-5 border-b border-[#dfcca6]/50">
-                    <div className="flex items-baseline gap-2">
-                      <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight font-sans">
+                  {/* Main Price - CENTERED & GOLDEN */}
+                  <div className="mt-5 pb-5 border-b border-[#dfcca6]/50 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-baseline justify-center gap-2">
+                      <div className="text-4xl sm:text-5xl font-black text-[#8b6914] tracking-tight font-sans">
                         {formatGBP(goldGram)}
                       </div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-[#b8860b] uppercase tracking-wider">
                         / gram
                       </span>
                     </div>
 
-                    {/* Live High / Low and Change Bar */}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs">
-                      {rates.goldChangePercent24h !== undefined && (
-                        <span className={`inline-flex items-center gap-1 font-extrabold px-2 py-0.5 rounded text-[11px] ${
+                    {/* Change % Badge */}
+                    {rates.goldChangePercent24h !== undefined && (
+                      <div className="mt-2 flex items-center justify-center">
+                        <span className={`inline-flex items-center gap-1 font-extrabold px-2.5 py-0.5 rounded-full text-xs ${
                           rates.goldChangePercent24h >= 0 
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
                             : "bg-rose-50 text-rose-700 border border-rose-200"
@@ -292,26 +292,8 @@ export default function Home() {
                           <span>{rates.goldChangePercent24h >= 0 ? "▲" : "▼"}</span>
                           <span>{rates.goldChangePercent24h >= 0 ? "+" : ""}{rates.goldChangePercent24h.toFixed(2)}%</span>
                         </span>
-                      )}
-                      {rates.goldLiveHigh && (
-                        <span className="text-slate-500 text-[11px] font-medium">
-                          Live High: <strong className="text-slate-800 font-bold">£{rates.goldLiveHigh.toFixed(2)}</strong>
-                        </span>
-                      )}
-                      {rates.goldLiveLow && (
-                        <span className="text-slate-500 text-[11px] font-medium">
-                          Live Low: <strong className="text-slate-800 font-bold">£{rates.goldLiveLow.toFixed(2)}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-[#8b6914] mt-2 font-semibold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        London LBMA Benchmark
-                      </span>
-                      <span className="text-slate-400 text-[11px]">· 0% VAT Bullion</span>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Weight Breakdown */}
@@ -404,10 +386,10 @@ export default function Home() {
                     </span>
                   </div>
 
-                  {/* Main Price */}
-                  <div className="mt-5 pb-5 border-b border-slate-200">
-                    <div className="flex items-baseline gap-2">
-                      <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight font-sans">
+                  {/* Main Price - CENTERED */}
+                  <div className="mt-5 pb-5 border-b border-slate-200 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-baseline justify-center gap-2">
+                      <div className="text-4xl sm:text-5xl font-black text-slate-800 tracking-tight font-sans">
                         {formatGBP(silverGram)}
                       </div>
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -415,10 +397,10 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {/* Live High / Low and Change Bar */}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs">
-                      {rates.silverChangePercent24h !== undefined && (
-                        <span className={`inline-flex items-center gap-1 font-extrabold px-2 py-0.5 rounded text-[11px] ${
+                    {/* Change % Badge */}
+                    {rates.silverChangePercent24h !== undefined && (
+                      <div className="mt-2 flex items-center justify-center">
+                        <span className={`inline-flex items-center gap-1 font-extrabold px-2.5 py-0.5 rounded-full text-xs ${
                           rates.silverChangePercent24h >= 0 
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
                             : "bg-rose-50 text-rose-700 border border-rose-200"
@@ -426,26 +408,8 @@ export default function Home() {
                           <span>{rates.silverChangePercent24h >= 0 ? "▲" : "▼"}</span>
                           <span>{rates.silverChangePercent24h >= 0 ? "+" : ""}{rates.silverChangePercent24h.toFixed(2)}%</span>
                         </span>
-                      )}
-                      {rates.silverLiveHigh && (
-                        <span className="text-slate-500 text-[11px] font-medium">
-                          Live High: <strong className="text-slate-800 font-bold">£{rates.silverLiveHigh.toFixed(2)}</strong>
-                        </span>
-                      )}
-                      {rates.silverLiveLow && (
-                        <span className="text-slate-500 text-[11px] font-medium">
-                          Live Low: <strong className="text-slate-800 font-bold">£{rates.silverLiveLow.toFixed(2)}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-slate-500 mt-1.5 font-semibold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Physical London Bullion Fix
-                      </span>
-                      <span className="text-slate-400 text-[11px]">· Pure Investment Grade</span>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Weight Breakdown */}
