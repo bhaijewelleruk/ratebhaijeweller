@@ -50,15 +50,23 @@ export async function POST(request: NextRequest) {
 
     // Support Apify webhook, Make.com, or direct JSON payloads
     let rawItems: any[] = [];
-    if (body.resource?.defaultDatasetId) {
+    const token =
+      body.token ||
+      body.apifyToken ||
+      request.nextUrl.searchParams.get("token") ||
+      process.env.APIFY_API_TOKEN ||
+      "";
+
+    if (body.resource?.defaultDatasetId || body.datasetId) {
+      const datasetId = body.resource?.defaultDatasetId || body.datasetId;
       // Apify Webhook automatically delivers dataset ID -> fetch the scraped stories directly
       try {
-        const apifyRes = await fetch(
-          `https://api.apify.com/v2/datasets/${body.resource.defaultDatasetId}/items?clean=true`,
-          { headers: { Accept: "application/json" } }
-        );
+        const apifyUrl = `https://api.apify.com/v2/datasets/${datasetId}/items?clean=true${token ? `&token=${token}` : ""}`;
+        const apifyRes = await fetch(apifyUrl, { headers: { Accept: "application/json" } });
         if (apifyRes.ok) {
           rawItems = await apifyRes.json();
+        } else {
+          console.error("Apify dataset fetch status:", apifyRes.status);
         }
       } catch (err: any) {
         console.error("Error fetching Apify dataset:", err.message);
