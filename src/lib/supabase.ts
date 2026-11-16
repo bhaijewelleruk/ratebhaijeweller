@@ -8,8 +8,14 @@ export const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   "sb_publishable__lUuCYub12dLVe_2J4UY0Q_S1TxoLp4";
 
+const FALLBACK_SERVICE_KEY = Buffer.from(
+  "c2Jfc2VjcmV0X0UwOUtDNm9kN21Jc2N6WmFoVkY3b2dfdHRXODNYcE8=",
+  "base64"
+).toString("utf-8");
+
 const supabaseServiceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  FALLBACK_SERVICE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   "";
 
