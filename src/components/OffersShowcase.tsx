@@ -31,8 +31,9 @@ export default function OffersShowcase() {
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxZoom, setLightboxZoom] = useState(1);
-  const [isAutoPlay, setIsAutoPlay] = useState(false);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [storyProgress, setStoryProgress] = useState(0);
 
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
   const mainStageRef = useRef<HTMLDivElement>(null);
@@ -160,14 +161,27 @@ export default function OffersShowcase() {
     }
   }, [activeIndex]);
 
-  // Auto-play timer (stories mode)
+  // Auto-play timer: exactly 5 seconds per story (Instagram Stories style)
   useEffect(() => {
-    if (!isAutoPlay || isLightboxOpen || isZooming) return;
+    if (!isAutoPlay || isLightboxOpen) return;
+
+    setStoryProgress(0);
+    const intervalMs = 50; // smooth 50ms tick
+    const totalMs = 5000; // 5 seconds
+    const step = (intervalMs / totalMs) * 100;
+
     const timer = setInterval(() => {
-      handleNext();
-    }, 5500);
+      setStoryProgress((prev) => {
+        if (prev >= 100) {
+          handleNext();
+          return 0;
+        }
+        return prev + step;
+      });
+    }, intervalMs);
+
     return () => clearInterval(timer);
-  }, [isAutoPlay, isLightboxOpen, isZooming, handleNext]);
+  }, [activeIndex, isAutoPlay, isLightboxOpen, handleNext]);
 
   // Mouse move handler for hover zoom
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -241,13 +255,26 @@ export default function OffersShowcase() {
                       title={`${item.title} - ${item.ref}`}
                     >
                       <div className="relative w-full h-full bg-[#faf6f0]">
-                        {/* Real Story Thumbnail Image */}
-                        <img
-                          src={item.imageUrl}
-                          alt={item.title}
-                          loading="lazy"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
+                        {/* Real Story Thumbnail Image or Video */}
+                        {item.isVideo || (item.imageUrl && item.imageUrl.includes(".mp4")) ? (
+                          <video
+                            src={item.videoUrl || item.imageUrl}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-cover pointer-events-none"
+                          />
+                        ) : (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.title}
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        )}
 
                         {/* Video Story Indicator */}
                         {item.isVideo && (
@@ -291,13 +318,10 @@ export default function OffersShowcase() {
                         className="h-1 flex-1 rounded-full overflow-hidden bg-white/45 backdrop-blur-xs"
                       >
                         <div
-                          className={`h-full transition-all duration-300 ${
-                            isPast
-                              ? "bg-amber-400 w-full"
-                              : isCurrent
-                              ? "bg-amber-400 w-full animate-pulse"
-                              : "w-0"
-                          }`}
+                          className="h-full bg-amber-400 transition-all duration-75"
+                          style={{
+                            width: isPast ? "100%" : isCurrent ? `${storyProgress}%` : "0%",
+                          }}
                         />
                       </div>
                     );
@@ -337,10 +361,17 @@ export default function OffersShowcase() {
                   onMouseEnter={() => !currentItem?.isVideo && setIsZooming(true)}
                   onMouseLeave={() => setIsZooming(false)}
                   onMouseMove={handleMouseMove}
-                  onClick={() => setIsLightboxOpen(true)}
-                  className={`relative w-full h-full overflow-hidden ${
-                    currentItem?.isVideo ? "cursor-pointer" : "cursor-zoom-in"
-                  }`}
+                  onClick={(e) => {
+                    // Tap left 35% for previous, right 65% for next (like Instagram Stories) - NO modal popup
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    if (clickX < rect.width * 0.35) {
+                      handlePrev();
+                    } else {
+                      handleNext();
+                    }
+                  }}
+                  className="relative w-full h-full overflow-hidden cursor-pointer"
                 >
                   {/* Video Story Rendering */}
                   {currentItem?.isVideo && currentItem?.videoUrl ? (
@@ -409,18 +440,10 @@ export default function OffersShowcase() {
                     </div>
                   </div>
 
-                  {/* Bottom Center Pill: "Hover to zoom · Click to enlarge" */}
+                  {/* Bottom Center Pill: 5s Auto-play / Navigation info */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/85 backdrop-blur-md border border-stone-200/80 text-[10px] sm:text-[11px] font-medium text-stone-700 shadow-sm">
-                      <svg className="w-3.5 h-3.5 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="11" cy="11" r="7" strokeWidth="2" />
-                        <path strokeLinecap="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 8v6M8 11h6" />
-                      </svg>
-                      <span>
-                        {currentItem?.isVideo
-                          ? "Click to play in fullscreen"
-                          : "Hover to zoom · Click to enlarge"}
-                      </span>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[10px] sm:text-[11px] font-medium text-white shadow-sm">
+                      <span>Tap left / right to navigate · 5s auto-play</span>
                     </div>
                   </div>
                 </div>
