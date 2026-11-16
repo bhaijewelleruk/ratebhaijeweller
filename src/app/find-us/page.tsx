@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { INITIAL_SITE_CONTENT, SiteContent } from "@/data/site-content";
+import { fetchCachedCatalog } from "@/lib/catalog-cache";
+import VipAppointmentBooking from "@/components/VipAppointmentBooking";
 
 export default function FindUsPage() {
   const [content, setContent] = useState<SiteContent>(INITIAL_SITE_CONTENT);
@@ -11,11 +13,10 @@ export default function FindUsPage() {
 
   useEffect(() => {
     setCurrentDayName(new Date().toLocaleDateString("en-US", { weekday: "long" }));
-    fetch("/api/admin/content")
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success && res.data?.siteContent) {
-          setContent(res.data.siteContent);
+    fetchCachedCatalog()
+      .then((cached) => {
+        if (cached.siteContent) {
+          setContent(cached.siteContent);
         }
       })
       .catch(() => {});
@@ -189,6 +190,10 @@ export default function FindUsPage() {
             </div>
           </div>
 
+        </div>
+        {/* VIP Showroom Appointment Booking Section */}
+        <div className="mt-10">
+          <VipAppointmentBooking whatsappNumber={contact.whatsapp} />
         </div>
       </main>
     </div>

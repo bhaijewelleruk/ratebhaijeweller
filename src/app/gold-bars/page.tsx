@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { DEFAULT_RATES, formatGBP, formatUKDateTime } from "@/lib/rates";
 import { BullionProduct, INITIAL_GOLD_ITEMS } from "@/data/bullion-items";
+import { fetchCachedCatalog } from "@/lib/catalog-cache";
 
 export default function GoldBarsPage() {
   const [rates, setRates] = useState(DEFAULT_RATES);
@@ -30,12 +31,11 @@ export default function GoldBarsPage() {
       })
       .catch(() => {});
 
-    // Fetch admin synced items
-    fetch("/api/admin/content")
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success && Array.isArray(res.data?.goldItems)) {
-          setGoldProducts(res.data.goldItems);
+    // Fetch database synced & cached Gold items
+    fetchCachedCatalog()
+      .then((cached) => {
+        if (Array.isArray(cached.goldItems)) {
+          setGoldProducts(cached.goldItems);
         }
       })
       .catch(() => {});
@@ -172,7 +172,7 @@ export default function GoldBarsPage() {
                       {item.purity}
                     </span>
                     <span className="text-[10px] sm:text-[11px] text-slate-500 font-semibold truncate max-w-[110px] sm:max-w-none">
-                      {item.refiner}
+                      {item.company || item.refiner}
                     </span>
                   </div>
 

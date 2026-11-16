@@ -10,6 +10,7 @@ import {
   formatGBP,
   formatUKDateTime,
 } from "@/lib/rates";
+import PriceHistoryChart from "@/components/PriceHistoryChart";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"current" | "interactive" | "overview">("current");
@@ -909,6 +910,12 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Historical Gold & Silver Price Chart (7D / 1M / 6M / 1Y) */}
+        <PriceHistoryChart
+          liveGoldGram={goldGram}
+          liveSilverGram={silverGram}
+        />
 
         {/* Disclaimer Note */}
         <div className="mt-8 p-4 rounded-xl bg-[#faf8f5]/80 border border-[#dfcca6]/60 text-xs text-slate-600 leading-relaxed shadow-2xs">

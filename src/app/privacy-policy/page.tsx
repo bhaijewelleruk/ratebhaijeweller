@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { INITIAL_SITE_CONTENT, SiteContent } from "@/data/site-content";
+import { fetchCachedCatalog } from "@/lib/catalog-cache";
 
 export default function PrivacyPolicyPage() {
   const [content, setContent] = useState<SiteContent>(INITIAL_SITE_CONTENT);
 
   useEffect(() => {
-    fetch("/api/admin/content")
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success && res.data?.siteContent) {
-          setContent(res.data.siteContent);
+    fetchCachedCatalog()
+      .then((cached) => {
+        if (cached.siteContent) {
+          setContent(cached.siteContent);
         }
       })
       .catch(() => {});

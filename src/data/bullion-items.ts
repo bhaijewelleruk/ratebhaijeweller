@@ -1,6 +1,7 @@
 export interface BullionProduct {
   id: string;
   name: string;
+  company?: string; // Brand / Manufacturer / Mint e.g. "PAMP Suisse", "The Royal Mint", "Valcambi", "Bhai Jewellers", "Metalor"
   metal: "gold" | "silver";
   weightGrams: number;
   purity: string;
@@ -197,7 +198,7 @@ export const INITIAL_GOLD_ITEMS: BullionProduct[] = [
     id: "500g-bar",
     name: "500 Gram Cast Gold Bar",
     metal: "gold",
-    weightGrams: 50,
+    weightGrams: 500,
     purity: "999.9 (24K)",
     type: "bar",
     premiumPercentage: 0.02,

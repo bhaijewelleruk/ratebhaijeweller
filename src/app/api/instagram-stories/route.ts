@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export interface InstagramStoryItem {
   id: string;
@@ -36,6 +37,34 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // 1. Try reading live automated stories from Supabase (updated via Make.com Webhook or Admin)
+    try {
+      const { data: dbData } = await supabaseAdmin.storage
+        .from("bhai-db")
+        .download("instagram-stories.json");
+
+      if (dbData) {
+        const text = await dbData.text();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed.stories) && parsed.stories.length > 0) {
+          cachedStories = parsed.stories;
+          lastFetchTime = now;
+          return NextResponse.json({
+            success: true,
+            count: parsed.stories.length,
+            username: "bhaijeweller",
+            stories: parsed.stories,
+            source: parsed.source || "supabase-webhook",
+            lastUpdated: parsed.lastUpdated || null,
+            cached: false,
+          });
+        }
+      }
+    } catch {
+      // fallback to feed below
+    }
+
+    // 2. Fallback to upstream feed
     const embedId = "25727414";
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);

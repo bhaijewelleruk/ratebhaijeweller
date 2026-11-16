@@ -1,76 +1,124 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { INITIAL_GOLD_ITEMS, INITIAL_SILVER_ITEMS, BullionProduct } from "@/data/bullion-items";
-import { INITIAL_SITE_CONTENT, SiteContent } from "@/data/site-content";
+import { INITIAL_SITE_CONTENT } from "@/data/site-content";
+import {
+  getIndexedCatalog,
+  saveCatalogToDatabase,
+  StoredDatabaseState,
+} from "@/lib/db";
 
-const DATA_FILE = path.join(process.cwd(), "src", "data", "stored-content.json");
-
-interface StoredData {
-  goldItems: BullionProduct[];
-  silverItems: BullionProduct[];
-  siteContent: SiteContent;
-  lastUpdated: string;
-}
-
-function getStoredData(): StoredData {
+export async function GET(request: NextRequest) {
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, "utf-8");
-      const parsed = JSON.parse(raw);
-      return {
-        goldItems: parsed.goldItems || INITIAL_GOLD_ITEMS,
-        silverItems: parsed.silverItems || INITIAL_SILVER_ITEMS,
-        siteContent: {
-          ...INITIAL_SITE_CONTENT,
-          ...(parsed.siteContent || {}),
+    const { searchParams } = new URL(request.url);
+    const forceFresh = searchParams.get("fresh") === "true";
+    const metal = searchParams.get("metal") as "gold" | "silver" | null;
+    const type = searchParams.get("type") as "bar" | "coin" | null;
+    const itemId = searchParams.get("id");
+
+    const indexed = await getIndexedCatalog(forceFresh);
+
+    // Check If-None-Match ETag for instant 304 Not Modified response
+    const clientEtag = request.headers.get("if-none-match");
+    if (!forceFresh && clientEtag && clientEtag === indexed.etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: indexed.etag,
+          "Cache-Control": "public, max-age=15, s-maxage=60, stale-while-revalidate=300",
         },
-        lastUpdated: parsed.lastUpdated || new Date().toISOString(),
-      };
+      });
     }
-  } catch (err) {
-    console.error("Error reading stored content file:", err);
+
+    // Optional O(1) single-item lookup via index
+    if (itemId) {
+      const product = indexed.byId[itemId] || null;
+      return NextResponse.json(
+        {
+          success: true,
+          product,
+          cachedAt: new Date(indexed.cachedAt).toISOString(),
+        },
+        {
+          headers: {
+            ETag: indexed.etag,
+            "Cache-Control": "public, max-age=15, s-maxage=60, stale-while-revalidate=300",
+          },
+        }
+      );
+    }
+
+    // Optional O(1) indexed slice by metal & type
+    let filteredItems = undefined;
+    if (metal === "gold" || metal === "silver") {
+      if (type === "bar" || type === "coin") {
+        filteredItems = indexed.byMetalAndType[`${metal}:${type}`];
+      } else {
+        filteredItems = indexed.byMetal[metal];
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: indexed.state,
+        filteredItems,
+        indexStats: {
+          totalGold: indexed.byMetal.gold.length,
+          totalSilver: indexed.byMetal.silver.length,
+          goldBars: indexed.byMetalAndType["gold:bar"].length,
+          goldCoins: indexed.byMetalAndType["gold:coin"].length,
+          silverBars: indexed.byMetalAndType["silver:bar"].length,
+          silverCoins: indexed.byMetalAndType["silver:coin"].length,
+          inStockGold: indexed.inStockCount.gold,
+          inStockSilver: indexed.inStockCount.silver,
+          etag: indexed.etag,
+          cachedAt: new Date(indexed.cachedAt).toISOString(),
+          dbSource: indexed.state.source || "supabase-cloud",
+        },
+      },
+      {
+        headers: {
+          ETag: indexed.etag,
+          "Cache-Control": forceFresh
+            ? "no-store, no-cache, must-revalidate"
+            : "public, max-age=15, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
+  } catch (error: any) {
+    console.error("Error fetching catalog from Supabase:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || "Failed to load content from database",
+      },
+      { status: 500 }
+    );
   }
-
-  return {
-    goldItems: INITIAL_GOLD_ITEMS,
-    silverItems: INITIAL_SILVER_ITEMS,
-    siteContent: INITIAL_SITE_CONTENT,
-    lastUpdated: new Date().toISOString(),
-  };
-}
-
-function saveStoredData(data: StoredData): boolean {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
-    return true;
-  } catch (err) {
-    console.error("Error writing stored content file:", err);
-    return false;
-  }
-}
-
-export async function GET() {
-  const data = getStoredData();
-  return NextResponse.json({
-    success: true,
-    data,
-  });
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const current = getStoredData();
+    const indexed = await getIndexedCatalog(false);
+    const current = indexed.state;
 
-    const updatedData: StoredData = {
-      goldItems: body.goldItems || current.goldItems,
-      silverItems: body.silverItems || current.silverItems,
+    const updatedData: StoredDatabaseState = {
+      goldItems: Array.isArray(body.goldItems) ? body.goldItems : current.goldItems,
+      silverItems: Array.isArray(body.silverItems) ? body.silverItems : current.silverItems,
       siteContent: body.siteContent
         ? {
-            contact: { ...current.siteContent.contact, ...(body.siteContent.contact || {}) },
-            findUs: { ...current.siteContent.findUs, ...(body.siteContent.findUs || {}) },
-            privacyPolicy: { ...current.siteContent.privacyPolicy, ...(body.siteContent.privacyPolicy || {}) },
+            contact: {
+              ...current.siteContent.contact,
+              ...(body.siteContent.contact || {}),
+            },
+            findUs: {
+              ...current.siteContent.findUs,
+              ...(body.siteContent.findUs || {}),
+            },
+            privacyPolicy: {
+              ...current.siteContent.privacyPolicy,
+              ...(body.siteContent.privacyPolicy || {}),
+            },
             slides: Array.isArray(body.siteContent.slides)
               ? body.siteContent.slides
               : current.siteContent.slides || INITIAL_SITE_CONTENT.slides,
@@ -79,18 +127,19 @@ export async function POST(request: NextRequest) {
       lastUpdated: new Date().toISOString(),
     };
 
-    const saved = saveStoredData(updatedData);
+    const result = await saveCatalogToDatabase(updatedData);
 
-    if (!saved) {
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, error: "Failed to save data to storage" },
+        { success: false, error: "Failed to save data to Supabase database" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Admin content updated successfully",
+      message: "Admin content synced to Supabase database & cache updated!",
+      dbSource: result.source,
       data: updatedData,
     });
   } catch (error: any) {
@@ -101,4 +150,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

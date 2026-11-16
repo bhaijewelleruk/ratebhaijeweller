@@ -1,12 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
+export const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://jrfxywyiohfzwaibrjhv.supabase.co";
+  "https://ydsjutiavwxycgezdjti.supabase.co";
 
-const supabaseAnonKey =
+export const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZnh5d3lpb2hmendhaWJyamh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1NDY2NDcsImV4cCI6MjEwOTEyMjY0N30.5_8CRRPGQLGOEuMcsm5EVlUMdyipEe9EEI9AFs-MGHM";
+  "sb_publishable__lUuCYub12dLVe_2J4UY0Q_S1TxoLp4";
 
-// Universal Supabase Client for Bhai Jeweller
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "";
+
+// Public Supabase Client (safe for client & server reads)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false },
+});
+
+// Server-side Admin Supabase Client (bypasses RLS for admin operations)
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});

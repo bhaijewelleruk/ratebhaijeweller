@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_RATES, calculateGoldSilverRatio } from "@/lib/rates";
+import { recordLiveRateToHistory } from "@/lib/db";
 
 const API_KEY = process.env.GOLD_API_KEY || "goldapi-7a9752a57eb151a0a449a7f057f7265c-io";
 
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
       };
 
       lastFetchTime = now;
+      recordLiveRateToHistory(goldGbpPerGram, silverGbpPerGram).catch(() => {});
       return NextResponse.json(cachedData, { headers: responseHeaders });
     }
   } catch (err) {
@@ -135,6 +137,7 @@ export async function GET(request: NextRequest) {
       };
 
       lastFetchTime = now;
+      recordLiveRateToHistory(goldGbpPerGram, silverGbpPerGram).catch(() => {});
       return NextResponse.json(cachedData, { headers: responseHeaders });
     }
   } catch (err) {
