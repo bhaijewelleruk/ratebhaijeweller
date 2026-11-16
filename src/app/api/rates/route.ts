@@ -46,7 +46,85 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(cachedData, { headers: responseHeaders });
   }
 
-  // 2. PRIMARY: Attempt live fetch from GoldAPI.io
+  // 2. PRIMARY: Real-time Live Market Spot (COMEX + London FX Fix)
+  try {
+    const [goldRes, gbpRes, silverRes] = await Promise.all([
+      fetch("https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d", {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        cache: "no-store",
+      }).then((r) => (r.ok ? r.json() : null)),
+      fetch("https://query1.finance.yahoo.com/v8/finance/chart/GBP=X?interval=1d", {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        cache: "no-store",
+      }).then((r) => (r.ok ? r.json() : null)),
+      fetch("https://query1.finance.yahoo.com/v8/finance/chart/SI=F?interval=1d", {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        cache: "no-store",
+      }).then((r) => (r.ok ? r.json() : null)),
+    ]);
+
+    const goldMeta = goldRes?.chart?.result?.[0]?.meta;
+    const gbpMeta = gbpRes?.chart?.result?.[0]?.meta;
+    const silverMeta = silverRes?.chart?.result?.[0]?.meta;
+
+    if (
+      goldMeta?.regularMarketPrice &&
+      gbpMeta?.regularMarketPrice &&
+      silverMeta?.regularMarketPrice
+    ) {
+      const gbpRate = Number(gbpMeta.regularMarketPrice);
+      const goldUsd = Number(goldMeta.regularMarketPrice);
+      const silverUsd = Number(silverMeta.regularMarketPrice);
+
+      const goldOunceGbp = Number((goldUsd * gbpRate).toFixed(2));
+      const silverOunceGbp = Number((silverUsd * gbpRate).toFixed(2));
+      const goldGbpPerGram = Number((goldOunceGbp / 31.1034768).toFixed(2));
+      const silverGbpPerGram = Number((silverOunceGbp / 31.1034768).toFixed(2));
+
+      const goldChangePercent24h = Number(
+        (goldMeta.regularMarketChangePercent || 0).toFixed(2)
+      );
+      const silverChangePercent24h = Number(
+        (silverMeta.regularMarketChangePercent || 0).toFixed(2)
+      );
+
+      const goldChange24h = Number(
+        ((goldMeta.regularMarketChange || 0) * gbpRate).toFixed(2)
+      );
+      const silverChange24h = Number(
+        ((silverMeta.regularMarketChange || 0) * gbpRate).toFixed(2)
+      );
+
+      const ratio = calculateGoldSilverRatio(goldGbpPerGram, silverGbpPerGram);
+
+      cachedData = {
+        goldGbpPerGram,
+        silverGbpPerGram,
+        goldOunceGbp,
+        silverOunceGbp,
+        goldChange24h,
+        goldChangePercent24h,
+        goldLiveHigh: Number(((goldMeta.regularMarketDayHigh || goldUsd) * gbpRate / 31.1035).toFixed(2)),
+        goldLiveLow: Number(((goldMeta.regularMarketDayLow || goldUsd) * gbpRate / 31.1035).toFixed(2)),
+        silverChange24h,
+        silverChangePercent24h,
+        silverLiveHigh: Number(((silverMeta.regularMarketDayHigh || silverUsd) * gbpRate / 31.1035).toFixed(2)),
+        silverLiveLow: Number(((silverMeta.regularMarketDayLow || silverUsd) * gbpRate / 31.1035).toFixed(2)),
+        ratio,
+        lastUpdated: new Date().toISOString(),
+        isLive: true,
+        source: "London Bullion Spot & Real-time FX (Live)",
+      };
+
+      lastFetchTime = now;
+      recordLiveRateToHistory(goldGbpPerGram, silverGbpPerGram).catch(() => {});
+      return NextResponse.json(cachedData, { headers: responseHeaders });
+    }
+  } catch (err) {
+    console.warn("Primary live spot provider error, falling back:", err);
+  }
+
+  // 3. SECONDARY: Attempt live fetch from GoldAPI.io
   try {
     const [goldRes, silverRes] = await Promise.all([
       fetch("https://www.goldapi.io/api/XAU/GBP", {
