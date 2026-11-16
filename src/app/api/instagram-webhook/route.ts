@@ -91,22 +91,24 @@ export async function POST(request: NextRequest) {
     }
 
     const incomingStories: InstagramStoryItem[] = rawItems
-      .filter((item: any) => item && (item.mediaUrl || item.media_url || item.imageUrl || item.url || item.image))
+      .filter((item: any) => item && (item.mediaUrl || item.media_url || item.imageUrl || item.url || item.image || item.display_url || item.displayUrl || item.video_url || item.videoUrl || item.thumbnail_src))
       .map((item: any, idx: number) => {
-        const id = String(item.storyId || item.id || item.code || `story-${Date.now()}-${idx}`);
-        const code = String(item.code || item.shortcode || id.slice(-8));
-        const mediaUrl = item.mediaUrl || item.media_url || item.imageUrl || item.url || item.image || "";
+        const id = String(item.storyId || item.id || item.code || item.pk || `story-${Date.now()}-${idx}`);
+        const code = String(item.code || item.shortcode || item.id || id.slice(-8));
+        const mediaUrl = item.mediaUrl || item.media_url || item.imageUrl || item.display_url || item.displayUrl || item.video_url || item.videoUrl || item.url || item.image || item.thumbnail_src || "";
         const isVideo =
           item.mediaType === "video" ||
           item.media_type === "VIDEO" ||
           item.isVideo === true ||
+          item.is_video === true ||
           item.is_video === "true" ||
+          Boolean(item.video_url || item.videoUrl) ||
           mediaUrl.includes(".mp4");
 
-        const timestamp = item.timestamp || item.taken_at || item.date || new Date().toISOString();
+        const timestamp = item.timestamp || item.taken_at || item.takenAt || item.date || new Date().toISOString();
         let dateFormatted = "Showroom Story";
         try {
-          const d = new Date(typeof timestamp === "number" ? timestamp * 1000 : timestamp);
+          const d = new Date(typeof timestamp === "number" ? (timestamp < 1e11 ? timestamp * 1000 : timestamp) : timestamp);
           const day = String(d.getDate()).padStart(2, "0");
           const month = String(d.getMonth() + 1).padStart(2, "0");
           const year = String(d.getFullYear()).slice(-2);
@@ -115,7 +117,7 @@ export async function POST(request: NextRequest) {
           dateFormatted = "Showroom Story";
         }
 
-        const title = item.caption || item.title || "Live Bradford Showroom Story";
+        const title = item.caption || item.title || item.text || "Live Bradford Showroom Story";
         const ref = `BJ-${code.slice(0, 6).toUpperCase()}`;
 
         return {
@@ -123,11 +125,11 @@ export async function POST(request: NextRequest) {
           code,
           ref,
           title,
-          imageUrl: isVideo && (item.thumbnailUrl || item.thumbnail_url) ? (item.thumbnailUrl || item.thumbnail_url) : mediaUrl,
+          imageUrl: isVideo && (item.thumbnailUrl || item.thumbnail_url || item.display_url) ? (item.thumbnailUrl || item.thumbnail_url || item.display_url) : mediaUrl,
           fullPicUrl: mediaUrl,
-          videoUrl: isVideo ? mediaUrl : null,
+          videoUrl: isVideo ? (item.video_url || item.videoUrl || mediaUrl) : null,
           isVideo,
-          link: item.permalink || `https://www.instagram.com/stories/bhaijeweller/${code}/`,
+          link: item.permalink || item.url || `https://www.instagram.com/stories/bhaijeweller/${code}/`,
           date: String(timestamp),
           dateFormatted,
           caption: title,
