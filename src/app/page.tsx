@@ -63,10 +63,10 @@ export default function Home() {
   useEffect(() => {
     setLastUpdatedDisplay(formatUKDateTime());
     fetchRates(true);
-    // Auto-polling every 20 seconds to guarantee real-time market accuracy
+    // Auto-polling every 10 seconds to guarantee real-time market accuracy
     const timer = setInterval(() => {
       fetchRates(false);
-    }, 20000);
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 
