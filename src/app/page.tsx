@@ -26,7 +26,7 @@ export default function Home() {
 
   // Fetch real-time live rates (supports force fresh on demand)
   const fetchRates = async (fresh = false) => {
-    setIsRefreshing(true);
+    if (fresh) setIsRefreshing(true);
     try {
       const url = fresh
         ? `/api/rates?fresh=true&t=${Date.now()}`
@@ -54,19 +54,19 @@ export default function Home() {
         setLastUpdatedDisplay(formatUKDateTime(new Date(data.lastUpdated || Date.now())));
       }
     } catch {
-      setRates(DEFAULT_RATES);
+      // keep current rates on network blip
     } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
+      if (fresh) setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
   useEffect(() => {
     setLastUpdatedDisplay(formatUKDateTime());
     fetchRates(true);
-    // Auto-polling every 10 seconds to guarantee real-time market accuracy
+    // Real-time live market ticker: auto-polling every 2 seconds
     const timer = setInterval(() => {
       fetchRates(false);
-    }, 10000);
+    }, 2000);
     return () => clearInterval(timer);
   }, []);
 

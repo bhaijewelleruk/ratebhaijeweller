@@ -4,8 +4,8 @@ import { recordLiveRateToHistory } from "@/lib/db";
 
 const API_KEY = process.env.GOLD_API_KEY || "goldapi-7a9752a57eb151a0a449a7f057f7265c-io";
 
-// Short 10-second cache to prevent spam while delivering real-time pricing
-const CACHE_DURATION_MS = 10 * 1000;
+// Ultra-fast 2-second cache for live real-time market updates
+const CACHE_DURATION_MS = 2 * 1000;
 
 interface RatesResponse {
   goldGbpPerGram: number;
