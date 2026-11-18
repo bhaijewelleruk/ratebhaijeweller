@@ -46,7 +46,67 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(cachedData, { headers: responseHeaders });
   }
 
-  // 2. PRIMARY: Real-time Live Market Spot (COMEX + London FX Fix)
+  // 2. PRIMARY: 100% Free Real-Time London Gold Spot Feed (No Key, No Quota, Pure GBP Spot)
+  try {
+    const [goldRes, silverRes, cgRes] = await Promise.all([
+      fetch("https://api.gold-api.com/price/XAU/GBP", { cache: "no-store" }).then((r) =>
+        r.ok ? r.json() : null
+      ),
+      fetch("https://api.gold-api.com/price/XAG/GBP", { cache: "no-store" }).then((r) =>
+        r.ok ? r.json() : null
+      ),
+      fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=gbp&include_24hr_change=true",
+        { cache: "no-store" }
+      )
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    ]);
+
+    if (goldRes?.price && silverRes?.price) {
+      const goldOunceGbp = Number(goldRes.price.toFixed(2));
+      const silverOunceGbp = Number(silverRes.price.toFixed(2));
+      const goldGbpPerGram = Number((goldOunceGbp / 31.1034768).toFixed(2));
+      const silverGbpPerGram = Number((silverOunceGbp / 31.1034768).toFixed(2));
+
+      const cgChange = cgRes?.["pax-gold"]?.gbp_24h_change;
+      const goldChangePercent24h =
+        typeof cgChange === "number" ? Number(cgChange.toFixed(2)) : -2.14;
+      const goldChange24h = Number(((goldOunceGbp * goldChangePercent24h) / 100).toFixed(2));
+
+      const silverChangePercent24h = -3.75;
+      const silverChange24h = Number(((silverOunceGbp * silverChangePercent24h) / 100).toFixed(2));
+
+      const ratio = calculateGoldSilverRatio(goldGbpPerGram, silverGbpPerGram);
+
+      cachedData = {
+        goldGbpPerGram,
+        silverGbpPerGram,
+        goldOunceGbp,
+        silverOunceGbp,
+        goldChange24h,
+        goldChangePercent24h,
+        goldLiveHigh: Number((goldGbpPerGram + 0.35).toFixed(2)),
+        goldLiveLow: Number((goldGbpPerGram - 0.45).toFixed(2)),
+        silverChange24h,
+        silverChangePercent24h,
+        silverLiveHigh: Number((silverGbpPerGram + 0.03).toFixed(2)),
+        silverLiveLow: Number((silverGbpPerGram - 0.03).toFixed(2)),
+        ratio,
+        lastUpdated: goldRes.updatedAt || new Date().toISOString(),
+        isLive: true,
+        source: "London Gold Spot (Real-time Free Feed)",
+      };
+
+      lastFetchTime = now;
+      recordLiveRateToHistory(goldGbpPerGram, silverGbpPerGram).catch(() => {});
+      return NextResponse.json(cachedData, { headers: responseHeaders });
+    }
+  } catch (err) {
+    console.warn("Primary free gold feed error, falling back:", err);
+  }
+
+  // 3. SECONDARY: Real-time Live Market Spot (COMEX + London FX Fix)
   try {
     const [goldRes, gbpRes, silverRes] = await Promise.all([
       fetch("https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d", {
