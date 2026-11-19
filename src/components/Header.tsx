@@ -8,10 +8,40 @@ import BLogo from "@/components/BLogo";
 export default function Header() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [liveRates, setLiveRates] = useState<{
+    goldOunceGbp: number;
+    goldGbpPerGram: number;
+    silverOunceGbp: number;
+    silverGbpPerGram: number;
+  }>({
+    goldOunceGbp: 2824.20,
+    goldGbpPerGram: 90.80,
+    silverOunceGbp: 34.20,
+    silverGbpPerGram: 1.10,
+  });
   const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
+    const fetchTopRates = async () => {
+      try {
+        const res = await fetch("/api/rates");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.goldGbpPerGram && data.silverGbpPerGram) {
+            setLiveRates({
+              goldOunceGbp: data.goldOunceGbp || Number((data.goldGbpPerGram * 31.1034768).toFixed(2)),
+              goldGbpPerGram: data.goldGbpPerGram,
+              silverOunceGbp: data.silverOunceGbp || Number((data.silverGbpPerGram * 31.1034768).toFixed(2)),
+              silverGbpPerGram: data.silverGbpPerGram,
+            });
+          }
+        }
+      } catch {}
+    };
+    fetchTopRates();
+    const timer = setInterval(fetchTopRates, 3000);
+    return () => clearInterval(timer);
   }, []);
 
   // Close drawer on escape key
@@ -160,6 +190,40 @@ export default function Header() {
 
   return (
     <>
+      {/* Top Live Ticker Bar - Gold Bank London Style */}
+      <div className="w-full bg-[#181614] text-slate-200 text-[11px] sm:text-xs py-1.5 px-3 sm:px-6 border-b border-[#2e2720] z-50 relative">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 overflow-x-auto [scrollbar-width:none]">
+          {/* Left: Trustpilot Rating Badge */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="inline-flex items-center gap-0.5 bg-[#00b67a] text-white text-[9.5px] font-black px-1.5 py-0.5 rounded-[2px] tracking-tighter">
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </span>
+            <span className="text-slate-300 font-semibold text-[10.5px] sm:text-xs tracking-tight">4.9 Rated Excellent</span>
+          </div>
+
+          {/* Right: Gold & Silver Live Rates (Identical to Gold Bank London Header) */}
+          <div className="flex items-center gap-3 sm:gap-6 shrink-0 font-medium tracking-tight">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="text-[#caa771] font-bold">Gold</span>
+              <span className="font-extrabold text-white">£{liveRates.goldOunceGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-[10px] text-slate-400 font-normal">o/z</span>
+              <span className="text-slate-600 font-normal mx-0.5 sm:mx-1">|</span>
+              <span className="font-extrabold text-white">£{liveRates.goldGbpPerGram.toFixed(2)}</span>
+              <span className="text-[10px] text-slate-400 font-normal">gm</span>
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="text-slate-400 font-bold">Silver</span>
+              <span className="font-extrabold text-white">£{liveRates.silverOunceGbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-[10px] text-slate-400 font-normal">o/z</span>
+              <span className="text-slate-600 font-normal mx-0.5 sm:mx-1">|</span>
+              <span className="font-extrabold text-white">£{liveRates.silverGbpPerGram.toFixed(2)}</span>
+              <span className="text-[10px] text-slate-400 font-normal">gm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Top Header: Simple White Theme, ONLY Home Link & Slider Button */}
       <header className="w-full bg-white border-b border-gray-100 sticky top-0 z-40" suppressHydrationWarning>
         <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between" suppressHydrationWarning>

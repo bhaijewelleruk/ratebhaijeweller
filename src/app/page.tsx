@@ -324,7 +324,7 @@ export default function Home() {
                         Per ounce (31.10g)
                       </span>
                       <span className="font-extrabold text-slate-900 tabular-nums">
-                        {formatGBP(goldGram * WEIGHT_CONVERSIONS.troyOunce)}
+                        {formatGBP(rates.goldOunceGbp || (goldGram * WEIGHT_CONVERSIONS.troyOunce))}
                       </span>
                     </div>
                   </div>
@@ -440,7 +440,7 @@ export default function Home() {
                         Per ounce (31.10g)
                       </span>
                       <span className="font-extrabold text-slate-900 tabular-nums">
-                        {formatGBP(silverGram * WEIGHT_CONVERSIONS.troyOunce)}
+                        {formatGBP(rates.silverOunceGbp || (silverGram * WEIGHT_CONVERSIONS.troyOunce))}
                       </span>
                     </div>
                   </div>
